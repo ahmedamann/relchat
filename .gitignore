@@ -1,0 +1,11 @@
+# Node.js
+node_modules/
+dist/
+
+# Python
+__pycache__/
+venv/
+.env
+.DS_Store
+llama-2-7b.Q4_K_M.gguf
+llama-2-7b.Q3_K_M.gguf
