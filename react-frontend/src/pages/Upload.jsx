@@ -1,24 +1,48 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Card, Form, Button } from "react-bootstrap";
-import UploadedFiles from "../components/Uploadedfiles"; // Import the new component
+import UploadedFiles from "../components/Uploadedfiles"; 
+import { uploadFile, getUploadedFiles, deleteDocument } from "../api"; // ✅ Import API functions
 
 const Upload = () => {
   const [file, setFile] = useState(null);
-  const [files, setFiles] = useState(["example1.pdf", "notes.txt"]); // Static files for now
+  const [files, setFiles] = useState([]); // ✅ Empty list initially
+
+  useEffect(() => {
+    fetchUploadedFiles();
+  }, []);
+
+  const fetchUploadedFiles = async () => {
+    try {
+      const fetchedFiles = await getUploadedFiles();
+      setFiles(fetchedFiles);
+    } catch (error) {
+      console.error("Failed to load uploaded files.");
+    }
+  };
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!file) return;
-    // We'll handle actual file upload later
-    setFiles([...files, file.name]);
-    setFile(null);
+    
+    try {
+      await uploadFile(file);
+      fetchUploadedFiles();
+      setFile(null);
+    } catch (error) {
+      console.error("Upload failed.");
+    }
   };
 
-  const handleDelete = (filename) => {
-    setFiles(files.filter(file => file !== filename)); // Remove file from state
+  const handleDelete = async (filename) => {
+    try {
+      await deleteDocument(filename);
+      setFiles(files.filter(file => file !== filename));
+    } catch (error) {
+      console.error("Failed to delete document.");
+    }
   };
 
   return (

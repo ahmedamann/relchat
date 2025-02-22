@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { chatWithLLM, getChatHistory, getConversations, addMessage, deleteConversation } from "../api";
+import { chatWithLLM, getChatHistory, getConversations, deleteConversation } from "../api";
 import { AuthContext } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card } from "react-bootstrap";
@@ -56,23 +56,34 @@ const Chat = () => {
   };
 
   const handleSendMessage = async (message) => {
-    setMessages((prev) => [...prev, { sender: "user", text: message }]);
-    setMessages((prev) => [...prev, { sender: "ai", text: "" }]);
-
-    let aiMessage = "";
-
-    await chatWithLLM(message, (streamedText) => {
-      aiMessage = streamedText;
+    // Append the user's message and a placeholder for the AI response
+    setMessages((prev) => [
+      ...prev,
+      { sender: "user", text: message },
+      { sender: "ai", text: "" }
+    ]);
+  
+    // Ensure we have a conversation ID; if not, create one
+    let conversationId = activeConversation;
+    if (!conversationId) {
+      conversationId = Date.now();
+      setActiveConversation(conversationId);
+    }
+  
+    // Stream the AI response token by token and update the placeholder message
+    await chatWithLLM(message, conversationId, (streamedText) => {
       setMessages((prev) => {
         const updated = [...prev];
-        updated[updated.length - 1] = { sender: "ai", text: aiMessage };
+        updated[updated.length - 1] = { sender: "ai", text: streamedText };
         return updated;
       });
     });
-
-    await addMessage(activeConversation || Date.now(), message, aiMessage);
+  
+    // Refresh conversation list if needed
     fetchConversations();
   };
+
+
 
   const handleDeleteConversation = async (conversationId) => {
     try {
@@ -117,3 +128,48 @@ const Chat = () => {
 };
 
 export default Chat;
+
+
+
+
+
+
+  // const handleSendMessage = async (message) => {
+  //   // Batch update: add user message and placeholder for AI response.
+  //   setMessages((prev) => [
+  //     ...prev,
+  //     { sender: "user", text: message },
+  //     { sender: "ai", text: "" }
+  //   ]);
+  
+  //   // Ensure we have a conversation ID. If none exists, create one.
+  //   let conversationId = activeConversation;
+  //   if (!conversationId) {
+  //     conversationId = Date.now();
+  //     setActiveConversation(conversationId);
+  //   }
+  
+  //   let aiMessage = "";
+  //   try {
+  //     // Stream the AI response token by token.
+  //     // Pass the conversationId so the backend knows this is part of an existing conversation.
+  //     await chatWithLLM(message, conversationId, (streamedText) => {
+  //       aiMessage = streamedText;
+  //       // Update the placeholder AI message with the current streamed text.
+  //       setMessages((prev) => {
+  //         const updated = [...prev];
+  //         updated[updated.length - 1] = { sender: "ai", text: aiMessage };
+  //         return updated;
+  //       });
+  //     });
+  //   } catch (error) {
+  //     console.error("Error during chat streaming:", error);
+  //   }
+  
+  //   try {
+  //     // Store the chat entry using the same conversation ID.
+  //     await addMessage(conversationId, message, aiMessage);
+  //   } catch (error) {
+  //     console.error("Error storing chat entry:", error);
+  //   }
+  // };

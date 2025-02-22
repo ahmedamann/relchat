@@ -7,7 +7,7 @@ from .db import SessionLocal
 from .models import User
 from pydantic import BaseModel
 
-SECRET_KEY = "4f3c9e7c5d8f69b2eebc3d6a1b9e56d8d2f8e5c4a3d1f9b7c2a6e4d3b8f1e0c7"  # Replace with a secure key
+SECRET_KEY = "4f3c9e7c5d8f69b2eebc3d6a1b9e56d8d2f8e5c4a3d1f9b7c2a6e4d3b8f1e0c7"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

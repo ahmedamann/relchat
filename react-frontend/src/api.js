@@ -7,6 +7,18 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Add a response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      window.location.href = "/login";
+    }
+    return Promise.reject(error);
+  }
+);
+
 /****************************************************************************************
  *                                    USERS                                             *
  * **************************************************************************************/
@@ -46,22 +58,26 @@ export const getConversations = async () => {
     },
   });
 
+  if (!response.ok) {
+    throw new Error(`Failed to fetch conversations: ${response.status}`);
+  }
+
   return response.json();
 };
 
-export const addMessage = async (conversationId, query, response) => {
-  const token = localStorage.getItem("token");
-  if (!token) throw new Error("Not authenticated");
+// export const addMessage = async (conversationId, query, response) => {
+//   const token = localStorage.getItem("token");
+//   if (!token) throw new Error("Not authenticated");
 
-  await fetch(`http://127.0.0.1:8000/chat/`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ conversation_id: conversationId, query, response }),
-  });
-};
+//   await fetch(`http://127.0.0.1:8000/chat/`, {
+//     method: "POST",
+//     headers: {
+//       "Authorization": `Bearer ${token}`,
+//       "Content-Type": "application/json",
+//     },
+//     body: JSON.stringify({ conversation_id: conversationId, query, response }),
+//   });
+// };
 
 export const getChatHistory = async (conversationId) => {
   const token = localStorage.getItem("token");
@@ -77,17 +93,25 @@ export const getChatHistory = async (conversationId) => {
   return response.json();
 };
 
-export const chatWithLLM = async (query, onStreamUpdate, delay = 0) => {
+
+export const chatWithLLM = async (query, conversationId, onStreamUpdate, delay = 0) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
   if (!query.trim()) throw new Error("Query cannot be empty");
 
-  const response = await fetch(`${API_BASE_URL}/chat/?query=${encodeURIComponent(query)}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-  });
+  // Build query parameters based on whether a conversation exists.
+  const conversationParam = conversationId ? `&conversation_id=${conversationId}` : "";
+  const newConvoParam = conversationId ? "&new_conversation=false" : "&new_conversation=true";
+
+  const response = await fetch(
+    `${API_BASE_URL}/chat/?query=${encodeURIComponent(query)}${conversationParam}${newConvoParam}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
   
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
@@ -99,7 +123,7 @@ export const chatWithLLM = async (query, onStreamUpdate, delay = 0) => {
     result += chunk;
     onStreamUpdate(result);
     if (delay > 0) {
-      await new Promise(resolve => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
   return result;
@@ -122,12 +146,20 @@ export const deleteConversation = async (conversationId) => {
  * **************************************************************************************/
 
 export const uploadFile = async (file) => {
+  const token = localStorage.getItem("token");
+  if (!token) throw new Error("Not authenticated");
+
   const formData = new FormData();
   formData.append("file", file);
+
   try {
     const response = await api.post("/upload/", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { 
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "multipart/form-data" 
+      },
     });
+
     return response.data;
   } catch (error) {
     console.error("Upload error:", error);
@@ -161,15 +193,15 @@ export const getUploadedFiles = async () => {
   return response.json();
 };
 
-export const deleteFile = async (filename) => {
+
+export const deleteDocument = async (fileName) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
 
-  await fetch(`http://127.0.0.1:8000/files/delete/?filename=${encodeURIComponent(filename)}`, {
+  await fetch(`${API_BASE_URL}/documents/delete/?file_name=${encodeURIComponent(fileName)}`, {
     method: "DELETE",
     headers: {
       "Authorization": `Bearer ${token}`,
     },
   });
 };
-

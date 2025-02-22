@@ -1,5 +1,6 @@
 import React from "react";
 import { ListGroup, Button, Card } from "react-bootstrap";
+import { BsTrash } from "react-icons/bs"; // ✅ Import trash icon
 
 const UploadedFiles = ({ files, onDelete }) => {
   return (
@@ -11,9 +12,21 @@ const UploadedFiles = ({ files, onDelete }) => {
         ) : (
           <ListGroup>
             {files.map((filename, index) => (
-              <ListGroup.Item key={index} className="d-flex justify-content-between align-items-center">
+              <ListGroup.Item 
+                key={index} 
+                className="d-flex justify-content-between align-items-center"
+              >
                 {filename}
-                <Button variant="danger" size="sm" onClick={() => onDelete(filename)}>Delete</Button>
+                <Button 
+                  variant="link" 
+                  className="text-danger p-0" 
+                  onClick={(e) => {
+                    e.stopPropagation(); // ✅ Prevent accidental selection
+                    onDelete(filename);
+                  }}
+                >
+                  <BsTrash size={16} />
+                </Button>
               </ListGroup.Item>
             ))}
           </ListGroup>
