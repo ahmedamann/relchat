@@ -1,4 +1,5 @@
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -6,18 +7,6 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
-
-// Add a response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/login";
-    }
-    return Promise.reject(error);
-  }
-);
 
 /****************************************************************************************
  *                                    USERS                                             *
@@ -40,7 +29,23 @@ export const logoutUser = () => {
 };
 
 export const isAuthenticated = () => {
-  return !!localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  if (!token){
+    console.log('No token')
+    return false;
+  } 
+
+  try {
+    const decoded = jwtDecode(token);
+    if (decoded.exp * 1000 < Date.now()) {
+      console.log('Token expired')
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.log(`another error: ${error}`)
+    return false;
+  }
 };
 
 /****************************************************************************************

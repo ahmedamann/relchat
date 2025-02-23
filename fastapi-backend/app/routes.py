@@ -2,7 +2,7 @@ from fastapi import Depends, APIRouter, HTTPException, UploadFile, File, Header,
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from .auth import SECRET_KEY, ALGORITHM, get_db
-from .embeddings import delete_document, add_document, retriever
+from .embeddings import delete_document, add_document, vector_store
 from .models import User, Conversation, Document
 from fastapi.responses import StreamingResponse
 from .llm import llm
@@ -65,7 +65,6 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
 async def list_uploaded_files(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Return a list of uploaded files for the authenticated user from the database."""
     documents = db.query(Document).filter(Document.user_id == user.username).all()
-    # Return only the file names (or additional info if needed)
     return [doc.file_name for doc in documents]
 
 
@@ -73,15 +72,16 @@ async def list_uploaded_files(user: User = Depends(get_current_user), db: Sessio
 async def delete_uploaded_document(
     file_name: str = Query(..., description="The name of the document to delete"),
     user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+    db: Session = Depends(get_db)):
     """Delete a document for the authenticated user."""
     selected_doc = db.query(Document).filter(Document.user_id == user.username, Document.file_name == file_name).first()
     if not selected_doc:
         raise HTTPException(status_code=404, detail="Document not found for this user.")
+    
     deletion_result = delete_document(user.username, file_name)
+    print(deletion_result)
 
-    # Delete the database record
+    # delete from the sql database
     db.delete(selected_doc)
     db.commit()
 
@@ -111,7 +111,6 @@ async def chat(
     if not query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-    # Create a new conversation if explicitly requested or if no conversation_id exists.
     if new_conversation or conversation_id is None:
         latest_convo = (
             db.query(Conversation)
@@ -123,11 +122,15 @@ async def chat(
 
     response_buffer = []
 
+    relevant_docs = vector_store.similarity_search(query=query,k=3,filter={"user_id": user.username})
+    
+    context = "\n".join([doc.page_content for doc in relevant_docs]) if relevant_docs else "None"
+
     rag_chain = (
-    {"context": retriever, "question": RunnablePassthrough()}
-    | main_prompt
-    | llm
-    | StrOutputParser()
+        {"context": lambda _: context, "question": RunnablePassthrough()}
+        | main_prompt
+        | llm
+        | StrOutputParser()
     )
 
     async def streamer(query):

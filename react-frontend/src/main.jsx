@@ -18,12 +18,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/" element={<App />}>
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
-            {/* All routes inside the PrivateRoute are protected */}
             <Route element={<PrivateRoute />}>
               <Route path="chat" element={<Chat />} />
               <Route path="upload" element={<Upload />} />
             </Route>
-            {/* Redirect unmatched routes */}
             <Route path="*" element={<Navigate to="/" />} />
           </Route>
         </Routes>
