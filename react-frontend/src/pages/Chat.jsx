@@ -3,9 +3,10 @@ import { chatWithLLM, getChatHistory, getConversations, deleteConversation } fro
 import { AuthContext } from "../AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Container, Row, Col, Card } from "react-bootstrap";
-import ChatWindow from "../components/ChatWindow";
-import ChatInput from "../components/ChatInput";
-import ConversationList from "../components/ConversationList";
+import ChatWindow from "../components/chat_components/ChatWindow";
+import ChatInput from "../components/chat_components/ChatInput";
+import ConversationList from "../components/chat_components/ConversationList";
+import "../styles/Chat.css";
 
 const Chat = () => {
   const [messages, setMessages] = useState([]);
@@ -34,20 +35,18 @@ const Chat = () => {
   const fetchChatHistory = async (conversationId) => {
     try {
       const chatHistory = await getChatHistory(conversationId);
-      
-      console.log("Fetched chat history:", chatHistory); // Debugging log
-  
+
+      console.log("Fetched chat history:", chatHistory);
+
       if (chatHistory.length === 0) {
         console.warn("No chat history found for conversation:", conversationId);
       }
-  
-      // Ensure proper message formatting
-      const formattedMessages = chatHistory.reduce((acc, chat) => {
-        acc.push({ sender: "user", text: chat.query });
-        acc.push({ sender: "ai", text: chat.response });
-        return acc;
-      }, []);
-  
+
+      const formattedMessages = chatHistory.flatMap((chat) => [
+        { sender: "user", text: chat.query },
+        { sender: "ai", text: chat.response }
+      ]);
+
       setMessages(formattedMessages);
       setActiveConversation(conversationId);
     } catch (error) {
@@ -56,21 +55,20 @@ const Chat = () => {
   };
 
   const handleSendMessage = async (message) => {
-    // Append the user's message and a placeholder for the AI response
+    if (!message.trim()) return;
+
     setMessages((prev) => [
       ...prev,
       { sender: "user", text: message },
       { sender: "ai", text: "" }
     ]);
-  
-    // Ensure we have a conversation ID; if not, create one
+
     let conversationId = activeConversation;
     if (!conversationId) {
       conversationId = Date.now();
       setActiveConversation(conversationId);
     }
-  
-    // Stream the AI response token by token and update the placeholder message
+
     await chatWithLLM(message, conversationId, (streamedText) => {
       setMessages((prev) => {
         const updated = [...prev];
@@ -78,19 +76,15 @@ const Chat = () => {
         return updated;
       });
     });
-  
-    // Refresh conversation list if needed
+
     fetchConversations();
   };
-
-
 
   const handleDeleteConversation = async (conversationId) => {
     try {
       await deleteConversation(conversationId);
-      setConversations(conversations.filter((c) => c.id !== conversationId));
+      setConversations((prev) => prev.filter((c) => c.id !== conversationId));
 
-      // If the deleted conversation was active, clear the chat window
       if (activeConversation === conversationId) {
         setMessages([]);
         setActiveConversation(null);
@@ -102,24 +96,29 @@ const Chat = () => {
 
   const handleNewChat = () => {
     setMessages([]);
-    setActiveConversation(Date.now());
+    setActiveConversation(null);
   };
 
   return (
-    <Container fluid className="d-flex" style={{ height: "90vh" }}>
-      <ConversationList 
-        conversations={conversations} 
-        onSelectConversation={fetchChatHistory} 
-        onDeleteConversation={handleDeleteConversation} 
-        onNewChat={handleNewChat} 
-      />
-      <Row className="flex-grow-1">
-        <Col>
-          <Card style={{ height: "85vh" }}>
-            <Card.Body>
+    <Container fluid className="chat-container">
+      <Row className="h-100">
+        <Col xs={12} md={3} className="conversation-list">
+          <ConversationList
+            conversations={conversations}
+            onSelectConversation={fetchChatHistory}
+            onDeleteConversation={handleDeleteConversation}
+            onNewChat={handleNewChat}
+          />
+        </Col>
+
+        <Col xs={12} md={9} className="chat-area">
+          <Card className="chat-card">
+            <Card.Body className="chat-body">
               <ChatWindow messages={messages} />
-              <ChatInput onSendMessage={handleSendMessage} />
             </Card.Body>
+            <Card.Footer className="chat-input-container">
+              <ChatInput onSendMessage={handleSendMessage} />
+            </Card.Footer>
           </Card>
         </Col>
       </Row>
@@ -128,48 +127,3 @@ const Chat = () => {
 };
 
 export default Chat;
-
-
-
-
-
-
-  // const handleSendMessage = async (message) => {
-  //   // Batch update: add user message and placeholder for AI response.
-  //   setMessages((prev) => [
-  //     ...prev,
-  //     { sender: "user", text: message },
-  //     { sender: "ai", text: "" }
-  //   ]);
-  
-  //   // Ensure we have a conversation ID. If none exists, create one.
-  //   let conversationId = activeConversation;
-  //   if (!conversationId) {
-  //     conversationId = Date.now();
-  //     setActiveConversation(conversationId);
-  //   }
-  
-  //   let aiMessage = "";
-  //   try {
-  //     // Stream the AI response token by token.
-  //     // Pass the conversationId so the backend knows this is part of an existing conversation.
-  //     await chatWithLLM(message, conversationId, (streamedText) => {
-  //       aiMessage = streamedText;
-  //       // Update the placeholder AI message with the current streamed text.
-  //       setMessages((prev) => {
-  //         const updated = [...prev];
-  //         updated[updated.length - 1] = { sender: "ai", text: aiMessage };
-  //         return updated;
-  //       });
-  //     });
-  //   } catch (error) {
-  //     console.error("Error during chat streaming:", error);
-  //   }
-  
-  //   try {
-  //     // Store the chat entry using the same conversation ID.
-  //     await addMessage(conversationId, message, aiMessage);
-  //   } catch (error) {
-  //     console.error("Error storing chat entry:", error);
-  //   }
-  // };

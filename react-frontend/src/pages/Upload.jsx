@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Container, Card, Form, Button } from "react-bootstrap";
 import UploadedFiles from "../components/Uploadedfiles"; 
-import { uploadFile, getUploadedFiles, deleteDocument } from "../api"; // ✅ Import API functions
+import { uploadFile, getUploadedFiles, deleteDocument } from "../api";
 
 const Upload = () => {
   const [file, setFile] = useState(null);
-  const [files, setFiles] = useState([]); // ✅ Empty list initially
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     fetchUploadedFiles();

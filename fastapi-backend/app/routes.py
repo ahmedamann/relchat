@@ -5,12 +5,9 @@ from .auth import SECRET_KEY, ALGORITHM, get_db
 from .embeddings import delete_document, add_document, vector_store
 from .models import User, Conversation, Document
 from fastapi.responses import StreamingResponse
-from .llm import llm
-from .prompts import main_prompt
 from io import BytesIO
 from PyPDF2 import PdfReader
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+from .retriever import pipeline
 
 router = APIRouter()
 
@@ -64,8 +61,14 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
 @router.get("/files/")
 async def list_uploaded_files(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Return a list of uploaded files for the authenticated user from the database."""
-    documents = db.query(Document).filter(Document.user_id == user.username).all()
-    return [doc.file_name for doc in documents]
+    # documents = db.query(Document).filter(Document.user_id == user.username).all()
+    docs = set()
+    results = vector_store.get(where={"user_id": user.username})["metadatas"]
+
+    for r in results:
+        docs.add(r["file_name"])
+    print(docs)
+    return list(docs)
 
 
 @router.delete("/documents/delete/")
@@ -74,13 +77,14 @@ async def delete_uploaded_document(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db)):
     """Delete a document for the authenticated user."""
+
+    deletion_result = delete_document(user.username, file_name)
+    print(deletion_result)
+
     selected_doc = db.query(Document).filter(Document.user_id == user.username, Document.file_name == file_name).first()
     if not selected_doc:
         raise HTTPException(status_code=404, detail="Document not found for this user.")
     
-    deletion_result = delete_document(user.username, file_name)
-    print(deletion_result)
-
     # delete from the sql database
     db.delete(selected_doc)
     db.commit()
@@ -97,6 +101,28 @@ def store_chat_entry(user, conversation_id, query, response_text, db: Session):
     chat_entry = Conversation(user_id=user.username, conversation_id=conversation_id, query=query, response=response_text)
     db.add(chat_entry)
     db.commit()
+
+def get_prev_conversation(db: Session, user: User, conversation_id: int) -> str:
+    """
+    Retrieve and format previous conversation entries for the given user and conversation ID.
+    """
+    entries = (
+        db.query(Conversation)
+        .filter(
+            Conversation.user_id == user.username,
+            Conversation.conversation_id == conversation_id
+        )
+        .order_by(Conversation.id)  # or use a timestamp if available
+        .all()
+    )
+
+    if entries:
+        formatted = "\n".join(
+            f"User: {entry.query}\nBot: {entry.response}" for entry in entries
+        )
+        return formatted
+    else:
+        return "No Previous Conversation"
 
 
 @router.get("/chat/")
@@ -122,24 +148,12 @@ async def chat(
 
     response_buffer = []
 
-    relevant_docs = vector_store.similarity_search(query=query,k=3,filter={"user_id": user.username})
+    chain = pipeline(user.username, get_prev_conversation(db, user, conversation_id), query)
     
-    context = "\n".join([doc.page_content for doc in relevant_docs]) if relevant_docs else "None"
-
-    rag_chain = (
-        {"context": lambda _: context, "question": RunnablePassthrough()}
-        | main_prompt
-        | llm
-        | StrOutputParser()
-    )
-
     async def streamer(query):
-        try:
-            for chunk in rag_chain.stream(query):
-                response_buffer.append(chunk)
-                yield chunk
-        except Exception as e:
-            print("Error in streaming:", e)
+        async for chunk in chain.astream(query):
+            response_buffer.append(chunk)
+            yield chunk
 
     async def finalizer():
         full_response = "".join(response_buffer)

@@ -1,6 +1,6 @@
 import React from "react";
 import { ListGroup, Button, Card } from "react-bootstrap";
-import { BsTrash } from "react-icons/bs"; // ✅ Import trash icon
+import { BsTrash } from "react-icons/bs";
 
 const UploadedFiles = ({ files, onDelete }) => {
   return (
@@ -21,7 +21,7 @@ const UploadedFiles = ({ files, onDelete }) => {
                   variant="link" 
                   className="text-danger p-0" 
                   onClick={(e) => {
-                    e.stopPropagation(); // ✅ Prevent accidental selection
+                    e.stopPropagation();
                     onDelete(filename);
                   }}
                 >

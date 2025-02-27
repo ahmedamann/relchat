@@ -70,25 +70,11 @@ export const getConversations = async () => {
   return response.json();
 };
 
-// export const addMessage = async (conversationId, query, response) => {
-//   const token = localStorage.getItem("token");
-//   if (!token) throw new Error("Not authenticated");
-
-//   await fetch(`http://127.0.0.1:8000/chat/`, {
-//     method: "POST",
-//     headers: {
-//       "Authorization": `Bearer ${token}`,
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({ conversation_id: conversationId, query, response }),
-//   });
-// };
-
 export const getChatHistory = async (conversationId) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
 
-  const response = await fetch(`http://127.0.0.1:8000/chat/history/?conversation_id=${conversationId}`, {
+  const response = await fetch(`${API_BASE_URL}/chat/history/?conversation_id=${conversationId}`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
@@ -138,7 +124,7 @@ export const deleteConversation = async (conversationId) => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
 
-  await fetch(`http://127.0.0.1:8000/conversations/delete/?conversation_id=${conversationId}`, {
+  await fetch(`${API_BASE_URL}/conversations/delete/?conversation_id=${conversationId}`, {
     method: "DELETE",
     headers: {
       "Authorization": `Bearer ${token}`,
@@ -158,7 +144,7 @@ export const uploadFile = async (file) => {
   formData.append("file", file);
 
   try {
-    const response = await api.post("/upload/", formData, {
+    const response = await api.post(`${API_BASE_URL}/upload`, formData, {
       headers: { 
         "Authorization": `Bearer ${token}`,
         "Content-Type": "multipart/form-data" 
@@ -172,23 +158,11 @@ export const uploadFile = async (file) => {
   }
 };
 
-export const searchDocuments = async (query) => {
-  try {
-    const response = await api.get("/search/", {
-      params: { query },
-    });
-    return response.data.results;
-  } catch (error) {
-    console.error("Search error:", error);
-    return [];
-  }
-};
-
 export const getUploadedFiles = async () => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
 
-  const response = await fetch("http://127.0.0.1:8000/files/", {
+  const response = await fetch(`${API_BASE_URL}/files/`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",
