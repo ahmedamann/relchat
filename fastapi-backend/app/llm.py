@@ -1,4 +1,3 @@
 from langchain_ollama import OllamaLLM
 
-# Load Llama 3.2 with Ollama
-llm = OllamaLLM(model="llama3.2", temperature=0)
+llm = OllamaLLM(base_url="http://127.0.0.1:11434", model="mistral", temperature=0)

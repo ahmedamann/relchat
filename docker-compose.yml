@@ -1,0 +1,28 @@
+services:
+  fastapi-backend:
+    build: ./fastapi-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///app/db_data/database.db
+    volumes:
+      - ./fastapi-backend/db_data:/app/db_data
+    depends_on:
+      - ollama
+
+  react-frontend:
+    build: ./react-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./react-frontend:/app
+    depends_on:
+      - fastapi-backend
+
+  ollama:
+    build: ./ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_data:/root/.ollama
+    restart: unless-stopped

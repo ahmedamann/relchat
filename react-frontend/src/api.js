@@ -56,7 +56,7 @@ export const getConversations = async () => {
   const token = localStorage.getItem("token");
   if (!token) throw new Error("Not authenticated");
 
-  const response = await fetch("http://127.0.0.1:8000/conversations/", {
+  const response = await fetch(`${API_BASE_URL}/conversations/`, {
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json",

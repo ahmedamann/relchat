@@ -26,6 +26,10 @@ def get_current_user(authorization: str = Header(None), db: Session = Depends(ge
         raise HTTPException(status_code=401, detail="Invalid token")
     
 
+@router.get("/")
+def home():
+    return {"message": "FastAPI + Ollama is running!"}
+
 ########################################################################################################
 #                                           DOCUMENTS                                                  #
 ########################################################################################################
@@ -49,9 +53,9 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
     else:
         text = file_bytes.decode("utf-8", errors="ignore")
 
-    document_id = add_document(user.username, file.filename, text)
+    document_id = add_document(user.id, file.filename, text)
 
-    new_doc = Document(user_id=user.username, file_name=file.filename, doc_id=document_id)
+    new_doc = Document(user_id=user.id, file_name=file.filename, doc_id=document_id)
     db.add(new_doc)
     db.commit()
 
@@ -61,9 +65,8 @@ async def upload_file(file: UploadFile = File(...), user: User = Depends(get_cur
 @router.get("/files/")
 async def list_uploaded_files(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Return a list of uploaded files for the authenticated user from the database."""
-    # documents = db.query(Document).filter(Document.user_id == user.username).all()
     docs = set()
-    results = vector_store.get(where={"user_id": user.username})["metadatas"]
+    results = vector_store.get(where={"user_id": user.id})["metadatas"]
 
     for r in results:
         docs.add(r["file_name"])
@@ -78,10 +81,10 @@ async def delete_uploaded_document(
     db: Session = Depends(get_db)):
     """Delete a document for the authenticated user."""
 
-    deletion_result = delete_document(user.username, file_name)
+    deletion_result = delete_document(user.id, file_name)
     print(deletion_result)
 
-    selected_doc = db.query(Document).filter(Document.user_id == user.username, Document.file_name == file_name).first()
+    selected_doc = db.query(Document).filter(Document.user_id == user.id, Document.file_name == file_name).first()
     if not selected_doc:
         raise HTTPException(status_code=404, detail="Document not found for this user.")
     
@@ -98,7 +101,7 @@ async def delete_uploaded_document(
 
 def store_chat_entry(user, conversation_id, query, response_text, db: Session):
     """Store the chat entry with a conversation ID."""
-    chat_entry = Conversation(user_id=user.username, conversation_id=conversation_id, query=query, response=response_text)
+    chat_entry = Conversation(user_id=user.id, conversation_id=conversation_id, query=query, response=response_text)
     db.add(chat_entry)
     db.commit()
 
@@ -109,7 +112,7 @@ def get_prev_conversation(db: Session, user: User, conversation_id: int) -> str:
     entries = (
         db.query(Conversation)
         .filter(
-            Conversation.user_id == user.username,
+            Conversation.user_id == user.id,
             Conversation.conversation_id == conversation_id
         )
         .order_by(Conversation.id)  # or use a timestamp if available
@@ -140,7 +143,7 @@ async def chat(
     if new_conversation or conversation_id is None:
         latest_convo = (
             db.query(Conversation)
-            .filter(Conversation.user_id == user.username)
+            .filter(Conversation.user_id == user.id)
             .order_by(Conversation.conversation_id.desc())
             .first()
         )
@@ -148,7 +151,7 @@ async def chat(
 
     response_buffer = []
 
-    chain = pipeline(user.username, get_prev_conversation(db, user, conversation_id), query)
+    chain = pipeline(user.id, get_prev_conversation(db, user, conversation_id), query)
     
     async def streamer(query):
         async for chunk in chain.astream(query):
@@ -167,7 +170,7 @@ async def get_chat_history(conversation_id: int, user: User = Depends(get_curren
     """Retrieve chat messages for a specific conversation."""
     chat_history = db.query(Conversation).filter(
         Conversation.conversation_id == conversation_id,
-        Conversation.user_id == user.username
+        Conversation.user_id == user.id
     ).all()
     
     return [{"query": chat.query, "response": chat.response} for chat in chat_history]
@@ -176,7 +179,7 @@ async def get_chat_history(conversation_id: int, user: User = Depends(get_curren
 async def list_Conversation(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Return a list of past Conversation for a user."""
     conversations = db.query(Conversation.conversation_id).filter(
-        Conversation.user_id == user.username).distinct().all()
+        Conversation.user_id == user.id).distinct().all()
     return [{"id": convo[0], "title": f"Conversation {convo[0]}"} for convo in conversations]
 
 
@@ -185,7 +188,7 @@ async def delete_conversation(conversation_id: int, user: User = Depends(get_cur
     """Delete a conversation and its messages."""
     deleted = db.query(Conversation).filter(
         Conversation.conversation_id == conversation_id,
-        Conversation.user_id == user.username
+        Conversation.user_id == user.id
     ).delete()
 
     if deleted == 0:

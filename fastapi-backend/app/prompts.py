@@ -1,6 +1,29 @@
 from langchain.prompts import ChatPromptTemplate
 
-system_template = """ 
+system_template = """
+You are an assistant that responds strictly using only the facts provided in the context below. Your answer must be detailed and thorough. When referencing any explicit fact from the context, format that fact in bold.
+
+Do not include any external information or facts not explicitly mentioned in the context. If the user's question requires further explanation, base your answer solely on the provided content, ensuring each explicit fact is emphasized by making it bold.
+
+After providing the answer, generate a follow-up question that is tightly linked to the context. The follow-up must always begin with "Would you..." and encourage further engagement with the material.
+
+Context:
+{context}
+"""
+
+human_template = """ 
+Question: {input}
+"""
+
+main_prompt = ChatPromptTemplate.from_messages(
+    [
+        ("system", system_template),
+        ("human", human_template)
+    ]
+)
+
+
+system_template_with_chat_history = """ 
 You are an assistant that must answer the user's question using only the facts provided in the context below.
 
 Do not provide any external information or facts not explicitly stated in the context.
@@ -19,14 +42,3 @@ Previous Conversation:
 Context:
 {context} \
 """
-
-human_template = """ 
-Question: {input}
-"""
-
-main_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", system_template),
-        ("human", human_template)
-    ]
-)

@@ -1,0 +1,11 @@
+# Ignore ChromaDB storage
+data/chroma/
+
+# Ignore FastAPI database files
+database.db
+
+# Ignore Python cache
+__pycache__/
+
+# Ignore enviroment variables file
+.env

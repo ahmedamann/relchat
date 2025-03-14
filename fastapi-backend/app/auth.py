@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from jose import JWTError, jwt
+from jose import jwt
 from .db import SessionLocal
 from .models import User
 from pydantic import BaseModel

@@ -2,6 +2,7 @@ from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import uuid
+import os
 
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
@@ -11,8 +12,12 @@ text_splitter = RecursiveCharacterTextSplitter(
     separators=["\n\n", "\n", " ", ""],  
 )
 
+tmp_dir = "/tmp/chroma"
+os.makedirs(tmp_dir, exist_ok=True)
+os.chmod(tmp_dir, 0o777)
+
 vector_store = Chroma(
-    persist_directory="./data/chroma",
+    persist_directory=tmp_dir,
     embedding_function=embedding_model
 )
 
