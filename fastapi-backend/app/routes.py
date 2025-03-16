@@ -125,7 +125,7 @@ def get_prev_conversation(db: Session, user: User, conversation_id: int) -> str:
         )
         return formatted
     else:
-        return "No Previous Conversation"
+        return None
 
 
 @router.get("/chat/")
@@ -151,7 +151,7 @@ async def chat(
 
     response_buffer = []
 
-    chain = pipeline(user.id, get_prev_conversation(db, user, conversation_id), query)
+    chain, query = pipeline(user.id, get_prev_conversation(db, user, conversation_id), query)
     
     async def streamer(query):
         async for chunk in chain.astream(query):

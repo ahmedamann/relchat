@@ -7,7 +7,7 @@ ENV NODE_ENV=development
 
 COPY ./package*.json ./
 
-RUN npm install --legacy-peer-deps
+RUN npm install
 
 COPY . .
 

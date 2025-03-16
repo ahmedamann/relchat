@@ -2,62 +2,48 @@ from .embeddings import vector_store
 from .llm import llm
 from langchain import hub
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
+from langchain_core.runnables import RunnablePassthrough
 from .prompts import main_prompt
 
 
 rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
 
 
-def pipeline(user, prev_conv, query):
-    retriever = vector_store.as_retriever(search_kwargs={'filter': {'user_id':user}})
+def get_new_prompt(query, prev_conv):
     prompt_chain = (
-        {
-            "input": lambda _:query,
-            "chat_history": lambda _: prev_conv
-        }
-        | rephrase_prompt
-        | llm
+    {
+        "input": RunnablePassthrough(),
+        "chat_history": lambda _: prev_conv
+    }
+    | rephrase_prompt
+    | llm
     )
 
-    final_chain = (
-        prompt_chain
-        | RunnableLambda(
-            lambda out: {
-                "input": out,
-                "context": retriever.invoke(out)
-            }
-        )
+    prompt = prompt_chain.invoke(query)
+    cleaned_prompt = prompt
+    return cleaned_prompt
+
+
+def retriever_chain(retriever):
+    retriever_chain = (
+        {
+            "input": RunnablePassthrough(),
+            "context": retriever
+        }
         | main_prompt
         | llm
-        | StrOutputParser()
     )
+    return retriever_chain
 
-    return final_chain
+def pipeline(user, prev_conv, query):
+    retriever = vector_store.as_retriever(search_kwargs={'filter': {'user_id':user}})
 
-# def pipeline(user, prev_conv, query):
-#     retriever = vector_store.as_retriever(search_kwargs={'filter': {'user_id':user}})
-#     prompt_chain = (
-#         {
-#             "input": lambda _:query,
-#             "chat_history": lambda _: prev_conv
-#         }
-#         | rephrase_prompt
-#         | llm
-#     )
-
-#     final_chain = (
-#         prompt_chain
-#         | RunnableLambda(
-#             lambda out: {
-#                 "input": out,
-#                 "chat_history": prev_conv,
-#                 "context": retriever.invoke(out)
-#             }
-#         )
-#         | main_prompt
-#         | llm
-#         | StrOutputParser()
-#     )
-
-#     return final_chain
+    if prev_conv:
+        print(prev_conv)
+        query = get_new_prompt(query, prev_conv)
+        print(f"Query Refined to: {query}")
+    else:
+        print(f"No Past Convo Query is the same: {query}")
+        # Do nothing
+    
+    return retriever_chain(retriever), query
