@@ -4,7 +4,7 @@ import { jwtDecode } from "jwt-decode";
 const API_BASE_URL = "http://0.0.0.0:8000";
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "http://0.0.0.0:8000",
   headers: { "Content-Type": "application/json" },
 });
 
