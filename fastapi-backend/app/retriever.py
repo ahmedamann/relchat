@@ -1,12 +1,13 @@
 from .embeddings import vector_store
 from .llm import llm
-from langchain import hub
+from langsmith import Client
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from .prompts import main_prompt
 
 
-rephrase_prompt = hub.pull("langchain-ai/chat-langchain-rephrase")
+client = Client()
+rephrase_prompt = client.pull_prompt("langchain-ai/chat-langchain-rephrase")
 
 
 def get_new_prompt(query, prev_conv):

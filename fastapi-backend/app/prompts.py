@@ -1,4 +1,4 @@
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 system_template = """
 You are an assistant that responds strictly using only the facts provided in the context below. Your answer must be detailed and thorough. When referencing any explicit fact from the context, format that fact in bold.

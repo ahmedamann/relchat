@@ -1,7 +1,11 @@
-from langchain_ollama import OllamaLLM
+from langchain_groq import ChatGroq
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-llm = OllamaLLM(base_url="http://127.0.0.1:11434", model="llama3.2", temperature=0)
-
+llm = ChatGroq(
+    model="openai/gpt-oss-120b",
+)
 
 
 
